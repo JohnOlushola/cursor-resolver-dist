@@ -111,7 +111,7 @@ elif [[ "$DRY_RUN" == "1" ]]; then
 else
     uv venv "$VENV" --python 3.12 >&3 2>&1 \
         || die "uv venv failed (need Python 3.12 — uv will fetch it)"
-    "${VENV}/bin/uv" pip install --python "${VENV}/bin/python" "${WHEEL_URL}" >&3 2>&1 \
+    uv pip install --python "${VENV}/bin/python" "${WHEEL_URL}" >&3 2>&1 \
         || die "uv pip install failed (wheel may not exist yet — see ${WHEEL_URL})"
     ok
 fi
