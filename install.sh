@@ -11,10 +11,23 @@ set -euo pipefail
 
 # --- config ---
 DIST_REPO="${RESOLVER_DIST_REPO:-JohnOlushola/cursor-resolver-dist}"
-WHEEL_URL="${RESOLVER_WHEEL_URL:-https://github.com/${DIST_REPO}/releases/latest/download/resolver-latest-py3-none-any.whl}"
 RESOLVER_HOME="${HOME}/.resolver"
 VENV="${RESOLVER_HOME}/venv"
 LOG_FILE="${RESOLVER_HOME}/install.log"
+
+# Resolve the wheel URL from the latest release. Wheel filenames must follow
+# PEP 427 ({name}-{version}-...), so we can't host a "resolver-latest" alias —
+# we look up the real versioned wheel via the GitHub API.
+resolve_wheel_url() {
+    if [[ -n "${RESOLVER_WHEEL_URL:-}" ]]; then
+        echo "$RESOLVER_WHEEL_URL"
+        return
+    fi
+    curl -fsSL "https://api.github.com/repos/${DIST_REPO}/releases/latest" 2>/dev/null \
+        | grep -oE '"browser_download_url": *"[^"]*resolver-[0-9][^"]*\.whl"' \
+        | head -1 \
+        | sed 's/.*"\(http[^"]*\)"/\1/'
+}
 
 # --- flags ---
 NO_OLLAMA=0
@@ -109,10 +122,15 @@ if [[ -d "$VENV" && -f "${VENV}/bin/resolver" ]]; then
 elif [[ "$DRY_RUN" == "1" ]]; then
     echo "[dry-run]"
 else
+    WHEEL_URL=$(resolve_wheel_url)
+    if [[ -z "$WHEEL_URL" ]]; then
+        die "Could not find a wheel in the latest release of ${DIST_REPO}. Check that a release with a 'resolver-X.Y.Z-py3-none-any.whl' asset exists."
+    fi
+    echo "[wheel: $(basename "$WHEEL_URL")]" >&3
     uv venv "$VENV" --python 3.12 >&3 2>&1 \
         || die "uv venv failed (need Python 3.12 — uv will fetch it)"
     uv pip install --python "${VENV}/bin/python" "${WHEEL_URL}" >&3 2>&1 \
-        || die "uv pip install failed (wheel may not exist yet — see ${WHEEL_URL})"
+        || die "uv pip install failed (URL: ${WHEEL_URL})"
     ok
 fi
 
