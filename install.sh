@@ -134,6 +134,29 @@ else
     ok
 fi
 
+# Step 4b: Embedder backend
+# The wheel doesn't include sentence-transformers / mlx-embeddings (they're
+# optional extras to keep the wheel small). Pick the right one for the host.
+step "Installing embedder backend"
+ARCH=$(uname -m)
+if [[ "$ARCH" == "arm64" ]]; then
+    EMBEDDER_PKG="mlx-embeddings"
+    EMBEDDER_PROBE="mlx_embeddings"
+else
+    EMBEDDER_PKG="sentence-transformers"
+    EMBEDDER_PROBE="sentence_transformers"
+fi
+if "${VENV}/bin/python" -c "import ${EMBEDDER_PROBE}" 2>/dev/null; then
+    skip
+elif [[ "$DRY_RUN" == "1" ]]; then
+    echo "[dry-run] would install ${EMBEDDER_PKG}"
+else
+    echo "[${EMBEDDER_PKG}]" >&3
+    uv pip install --python "${VENV}/bin/python" "${EMBEDDER_PKG}" >&3 2>&1 \
+        || die "${EMBEDDER_PKG} install failed"
+    ok
+fi
+
 # Step 5: spaCy model
 # spaCy's `python -m spacy download` shells out to pip, which doesn't
 # exist in a uv-created venv. Install the model wheel directly via uv.
