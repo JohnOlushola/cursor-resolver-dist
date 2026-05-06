@@ -183,17 +183,29 @@ else
         ln -sf "${VENV}/bin/resolver" /usr/local/bin/resolver
         ln -sf "${VENV}/bin/resolver-mcp" /usr/local/bin/resolver-mcp
         ok
-    elif command -v sudo >/dev/null 2>&1; then
+    elif sudo -n true 2>/dev/null; then
+        # Passwordless sudo available — use it for /usr/local/bin
         sudo ln -sf "${VENV}/bin/resolver" /usr/local/bin/resolver \
-            && sudo ln -sf "${VENV}/bin/resolver-mcp" /usr/local/bin/resolver-mcp
+            || die "sudo ln failed"
+        sudo ln -sf "${VENV}/bin/resolver-mcp" /usr/local/bin/resolver-mcp \
+            || die "sudo ln failed"
         ok
     else
-        # Fall back to ~/.local/bin
+        # No write access to /usr/local/bin and sudo would prompt for a
+        # password (which curl|bash can't supply) — fall back to ~/.local/bin.
         mkdir -p "${HOME}/.local/bin"
         ln -sf "${VENV}/bin/resolver" "${HOME}/.local/bin/resolver"
         ln -sf "${VENV}/bin/resolver-mcp" "${HOME}/.local/bin/resolver-mcp"
         ok
-        echo "  (Linked to ~/.local/bin; ensure that's on your PATH.)"
+        # Tell the user how to get this on PATH if it isn't.
+        case ":${PATH}:" in
+            *":${HOME}/.local/bin:"*) ;;
+            *)
+                echo "  ℹ Linked to ~/.local/bin (sudo would have prompted)."
+                echo "    Add to PATH: echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
+                echo "    Or symlink manually: sudo ln -sf ${VENV}/bin/resolver /usr/local/bin/"
+                ;;
+        esac
     fi
 fi
 
