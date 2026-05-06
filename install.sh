@@ -221,6 +221,22 @@ fi
 echo
 echo "✓ Done."
 echo
+echo "──────────────────────────────────────────────────────────────────"
+echo "  Required: grant Full Disk Access"
+echo "──────────────────────────────────────────────────────────────────"
+echo "  The engine runs under launchd, which doesn't inherit your"
+echo "  Terminal's privacy permissions. Without FDA, reads of iMessage,"
+echo "  Mail, Notes, Safari, etc. will silently fail."
+echo
+echo "  1. Open: System Settings → Privacy & Security → Full Disk Access"
+echo "  2. Click '+' (you may need to authenticate)"
+echo "  3. In the file picker, press Cmd+Shift+G and paste:"
+echo
+echo "     ${VENV}/bin/python3.12"
+echo
+echo "  4. Toggle the new entry ON"
+echo "──────────────────────────────────────────────────────────────────"
+echo
 echo "Next:"
 echo "   resolver start              # start the engine (auto-starts at login)"
 echo "   resolver mcp install        # register with Claude Desktop"
