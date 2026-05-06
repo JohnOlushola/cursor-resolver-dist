@@ -135,14 +135,23 @@ else
 fi
 
 # Step 5: spaCy model
+# spaCy's `python -m spacy download` shells out to pip, which doesn't
+# exist in a uv-created venv. Install the model wheel directly via uv.
 step "Downloading spaCy en_core_web_sm"
 if [[ -d "${VENV}/lib/python3.12/site-packages/en_core_web_sm" ]]; then
     skip
 elif [[ "$DRY_RUN" == "1" ]]; then
     echo "[dry-run]"
 else
-    "${VENV}/bin/python" -m spacy download en_core_web_sm >&3 2>&1 \
-        || die "spaCy download failed"
+    SPACY_VER=$("${VENV}/bin/python" -c "import spacy; print(spacy.__version__)" 2>/dev/null)
+    if [[ -z "$SPACY_VER" ]]; then
+        die "spaCy not importable in venv (install step 4 may have silently failed)"
+    fi
+    # Map spaCy 3.X.Y to model 3.X.0 — spaCy guarantees minor-version compat for models.
+    MODEL_VER="${SPACY_VER%.*}.0"
+    MODEL_URL="https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-${MODEL_VER}/en_core_web_sm-${MODEL_VER}-py3-none-any.whl"
+    uv pip install --python "${VENV}/bin/python" "${MODEL_URL}" >&3 2>&1 \
+        || die "spaCy model install failed (URL: ${MODEL_URL})"
     ok
 fi
 
